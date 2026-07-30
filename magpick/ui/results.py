@@ -69,7 +69,7 @@ def render_candidate_list(candidates, scores, selected_idx=None):
                 dbc.Col(html.Span(f"{score:.3f}", style={"color": color, "fontWeight": "bold"}), width=2),
                 dbc.Col(dbc.Badge(status, color="success" if score > 0 else "danger"), width=2),
             ], className="py-1"),
-            id={"candidate-row": i}, n_clicks=0,
+            id={"type": "candidate-row", "index": i}, n_clicks=0,
             style={"border": "1px solid #dee2e6", "borderLeft": f"3px solid {color}", "borderRadius": "4px",
                    "marginBottom": "2px", "cursor": "pointer", "backgroundColor": bg, "padding": "2px 6px"},
         ))
@@ -84,10 +84,10 @@ def render_candidate_detail(candidate, evaluator_results, score, snapshots=None)
     ev_rows = []
     for ev in evaluator_results:
         cls = "text-success" if ev.passed else "text-danger"
-        icon = "\u2714" if ev.passed else "\u2718"
+        icon = "\u2714 " if ev.passed else "\u2718 "
         ev_rows.append(html.Tr([
-            html.Td(icon, className=cls, style={"width": "30px"}),
-            html.Td(ev.name), html.Td(f"{ev.score:.3f}"),
+            html.Td([html.Span(icon, className=cls), ev.name]),
+            html.Td(f"{ev.score:.3f}"),
             html.Td(ev.reason, className="small text-muted"),
         ]))
     ev_table = dbc.Table([html.Thead(html.Tr([html.Th("Evaluator"), html.Th("Score"), html.Th("Reason")])), html.Tbody(ev_rows)], bordered=True, hover=True, size="sm")
@@ -113,7 +113,7 @@ def render_candidate_detail(candidate, evaluator_results, score, snapshots=None)
     rec_items = []
     for rec in recs:
         risk_cls = {"High": "danger", "Medium": "warning", "Low": "success"}.get(rec["risk"], "secondary")
-        rec_items.append(html.Div([html.Span(rec["icon"], className="me-1"), html.Strong(rec["evaluator"]), " \u2014 ", rec["reason"], html.Br(), html.Small(f"Risk: ", html.Span(rec["risk"], className=f"text-{risk_cls} fw-bold"), " | Suggestion: ", rec["suggestion"], className="text-muted")], className="mb-2 pb-2 border-bottom"))
+        rec_items.append(html.Div([html.Span(rec["icon"], className="me-1"), html.Strong(rec["evaluator"]), " \u2014 ", rec["reason"], html.Br(), html.Small("Risk: ", html.Span(rec["risk"], className=f"text-{risk_cls} fw-bold"), " | Suggestion: ", rec["suggestion"], className="text-muted")], className="mb-2 pb-2 border-bottom"))
 
     # Snapshots
     snap_div = html.Div()

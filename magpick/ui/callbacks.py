@@ -9,17 +9,16 @@ import base64
 import os
 import tempfile
 import numpy as np
-from dash import Input, Output, State, callback_context, no_update, html
+import plotly.graph_objects as go
+from dash import ALL, Input, Output, State, callback_context, no_update, html
 from dash.exceptions import PreventUpdate
-import dash_bootstrap_components as dbc
 
 from magpick.ui.inputs import GRIPPER_PRESETS
 from magpick.ui.viewport_3d import render_scene, CAMERA_PRESETS
 from magpick.ui.results import render_candidate_list, render_candidate_detail
 from magpick.ui.utils import downsample_pcd
-from magpick.models import Billet, CandidatePose, Scene
-from magpick.grasp_quality_engine import GraspQualityEngine
-from magpick.report import generate_report
+from magpick.models import Billet, CandidatePose, EvaluationResult, Scene
+from magpick.grasp_quality_engine import CompatibilityResult, GraspQualityEngine
 
 
 def register_callbacks(app):
@@ -289,7 +288,7 @@ def register_callbacks(app):
     # ==========================================================
     @app.callback(
         Output("candidate-detail", "children", allow_duplicate=True),
-        Input({"type": "candidate-row", "index": "__all__"}, "n_clicks"),
+        Input({"type": "candidate-row", "index": ALL}, "n_clicks"),
         State("eval-store", "data"),
         prevent_initial_call=True,
     )
@@ -324,7 +323,6 @@ def register_callbacks(app):
         ev_reasons_all = eval_data.get("evaluator_reasons", [])
 
         # Rebuild CandidatePose
-        from magpick.models import CandidatePose, EvaluationResult
         cp = CandidatePose(
             position=np.array(candidates_pos[idx]),
             orientation=np.array(candidates_ori[idx]),
@@ -373,9 +371,6 @@ def register_callbacks(app):
         if not n_clicks or not eval_data or not eval_data.get("scores"):
             raise PreventUpdate
         try:
-            import tempfile, os
-            candidates_pos = eval_data["candidates_positions"]
-            candidates_ori = eval_data["candidates_orientations"]
             scores = eval_data["final_scores"]
             ev_names = eval_data["evaluator_names"]
             ev_scores_all = eval_data["evaluator_scores"]
@@ -383,47 +378,10 @@ def register_callbacks(app):
             ev_details_all = eval_data["evaluator_details"]
             ev_reasons_all = eval_data["evaluator_reasons"]
 
-            from magpick.models import Billet, CandidatePose, EvaluationResult
-            from magpick.utils.visualization import generate_recommendations
-
-            billet = Billet.from_mm(id=0, position=np.zeros(3), orientation=np.array([0,0,0,1.0]),
-                                    radius_mm=32.5, length_mm=175, weight_kg=3.5)
-
-            candidates = []
-            results = []
-            for idx, score in enumerate(scores):
-                cp = CandidatePose(position=np.array(candidates_pos[idx]), orientation=np.array(candidates_ori[idx]))
-                cp.rank = idx + 1
-                candidates.append(cp)
-                evaluator_results = []
-                for j, name in enumerate(ev_names):
-                    details = ev_details_all[idx].get(name, {}) if idx < len(ev_details_all) else {}
-                    reasons = ev_reasons_all[idx].get(name, "") if idx < len(ev_reasons_all) else ""
-                    er = EvaluationResult(
-                        name=name,
-                        passed=ev_passed_all[idx][j] if idx < len(ev_passed_all) and j < len(ev_passed_all[idx]) else False,
-                        score=ev_scores_all[idx][j] if idx < len(ev_scores_all) and j < len(ev_scores_all[idx]) else 0,
-                        weight=0, reason=reasons, details=details,
-                    )
-                    evaluator_results.append(er)
-                from magpick.models import CandidateResult, CompatibilityResult, GraspQualitySummary
-                cr = CandidateResult(candidate=cp, evaluator_results=evaluator_results, final_score=score)
-                results.append(cr)
-
-            compat = CompatibilityResult(compatible=True, reasons=["Generated from UI"])
-            summary = GraspQualitySummary(
-                total_candidates=len(results),
-                passed=sum(1 for r in results if r.final_score > 0),
-                failed=sum(1 for r in results if r.final_score == 0),
-                best_score=max((r.final_score for r in results), default=0),
-                best_candidate_idx=0,
-            )
-            report_data = {
-                "candidates": results,
-                "billets": [billet],
-                "compatibility": compat,
-                "summary": summary,
-            }
+            total = len(scores)
+            passed_n = sum(1 for s in scores if s > 0)
+            failed_n = total - passed_n
+            best = max(scores) if scores else 0
 
             html_content = f"""<!DOCTYPE html>
 <html><head><meta charset='utf-8'><title>MagPick-GQE Report</title>
@@ -445,24 +403,27 @@ th {{ background: #f0f2f5; font-weight: 600; }}
 .footer {{ text-align: center; color: #95a5a6; margin-top: 40px; padding: 20px; border-top: 1px solid #eee; }}
 </style></head><body>
 <h1>MagPick-GQE Grasp Quality Report</h1>
-<p>Generated from Dashboard | {summary.total_candidates} candidates evaluated</p>
+<p>Generated from Dashboard | {total} candidates evaluated</p>
 <div class="summary">
-<div class="card"><div class="value">{summary.best_score:.3f}</div><div class="label">Best Score</div></div>
-<div class="card"><div class="value">{summary.passed}</div><div class="label">Accepted</div></div>
-<div class="card"><div class="value">{summary.failed}</div><div class="label">Rejected</div></div>
-<div class="card"><div class="value">{(summary.passed/summary.total_candidates*100):.0f}%</div><div class="label">Pass Rate</div></div>
+<div class="card"><div class="value">{best:.3f}</div><div class="label">Best Score</div></div>
+<div class="card"><div class="value">{passed_n}</div><div class="label">Accepted</div></div>
+<div class="card"><div class="value">{failed_n}</div><div class="label">Rejected</div></div>
+<div class="card"><div class="value">{(passed_n/total*100):.0f}%</div><div class="label">Pass Rate</div></div>
 </div>
 <h2>Candidate Results</h2>"""
 
-            for i, r in enumerate(results):
-                status_cls = "pass" if r.final_score > 0 else "fail"
-                status_txt = "PASS" if r.final_score > 0 else "FAIL"
+            for i, score in enumerate(scores):
+                status_cls = "pass" if score > 0 else "fail"
+                status_txt = "PASS" if score > 0 else "FAIL"
                 html_content += f'<div class="candidate {status_cls}">'
-                html_content += f'<h3>Candidate #{i+1} <span class="{status_cls}">{status_txt}</span> <span class="score">{r.final_score:.3f}</span></h3>'
+                html_content += f'<h3>Candidate #{i+1} <span class="{status_cls}">{status_txt}</span> <span class="score">{score:.3f}</span></h3>'
                 html_content += '<table><tr><th>Evaluator</th><th>Score</th><th>Status</th><th>Reason</th></tr>'
-                for ev in r.evaluator_results:
-                    cls = "pass" if ev.passed else "fail"
-                    html_content += f'<tr><td>{ev.name}</td><td>{ev.score:.3f}</td><td class="{cls}">{"PASS" if ev.passed else "FAIL"}</td><td>{ev.reason}</td></tr>'
+                for j, name in enumerate(ev_names):
+                    sc = ev_scores_all[i][j] if i < len(ev_scores_all) and j < len(ev_scores_all[i]) else 0
+                    pa = ev_passed_all[i][j] if i < len(ev_passed_all) and j < len(ev_passed_all[i]) else False
+                    re = ev_reasons_all[i].get(name, "") if i < len(ev_reasons_all) else ""
+                    cls = "pass" if pa else "fail"
+                    html_content += f'<tr><td>{name}</td><td>{sc:.3f}</td><td class="{cls}">{"PASS" if pa else "FAIL"}</td><td>{re}</td></tr>'
                 html_content += '</table></div>'
 
             html_content += f"""<div class="footer">MagPick-GQE v1.1.0 | Industrial Grasp Quality Evaluation Framework</div>
@@ -470,7 +431,7 @@ th {{ background: #f0f2f5; font-weight: 600; }}
 
             return dict(content=html_content, filename="magpick_gqe_report.html")
 
-        except Exception as e:
+        except Exception:
             raise PreventUpdate
 
     # ==========================================================
