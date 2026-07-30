@@ -211,18 +211,35 @@ def register_callbacks(app):
                     air_gap_mm=b_gap or 0,
                 )
                 billets.append(b)
-                # Generate grasp candidates: top-down + 2 angled
+                # Generate grasp candidates aligned with billet axis
+                from scipy.spatial.transform import Rotation
+                R_billet = Rotation.from_quat(orient)
+                billet_long_axis = R_billet.as_matrix()[:, 2]  # local Z = cylinder axis
+
                 tcp_depth = (g_tcp or 103.4) / 1000.0
-                for angle_deg in [0, 15, -15]:
-                    from scipy.spatial.transform import Rotation
-                    if angle_deg == 0:
-                        q = np.array([0.0, 0.0, 0.0, 1.0])
-                    else:
-                        q = Rotation.from_euler("y", angle_deg, degrees=True).as_quat()
-                    cp = CandidatePose(
-                        position=pos + np.array([0, 0, tcp_depth + 0.05]),
-                        orientation=q,
-                    )
+
+                # Generate 12 candidates at 30° intervals around the billet axis
+                for i in range(12):
+                    azimuth_deg = i * 30.0
+                    azimuth_rad = np.radians(azimuth_deg)
+
+                    # Approach direction: rotate around billet axis
+                    R_azimuth = Rotation.from_rotvec(azimuth_rad * billet_long_axis)
+                    approach = R_azimuth.apply(np.array([1.0, 0.0, 0.0]))
+
+                    # TCP position: billet center + approach * (billet radius + TCP depth)
+                    tcp_pos = pos + approach * (b.radius + tcp_depth)
+
+                    # Gripper orientation:
+                    #   local Z (approach) = -approach (pointing toward billet)
+                    #   local Y (pad length) = billet long axis
+                    local_z = -approach
+                    local_y = billet_long_axis
+                    local_x = np.cross(local_y, local_z)
+                    local_x /= np.linalg.norm(local_x)
+
+                    R_gripper = Rotation.from_matrix(np.column_stack([local_x, local_y, local_z]))
+                    cp = CandidatePose(position=tcp_pos, orientation=R_gripper.as_quat())
                     candidates.append(cp)
 
             # ---- Run evaluation ----

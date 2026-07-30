@@ -16,7 +16,7 @@ GRIPPER_PRESETS = {
         "weight_kg": 1.5,
         "tcp_depth_mm": 103.4,
         "num_poles": 8,
-        "pole_positions": "[[-0.045,-0.025],[-0.015,-0.025],[0.015,-0.025],[0.045,-0.025],[-0.045,0.025],[-0.015,0.025],[0.015,0.025],[0.045,0.025]]",
+        "pole_positions": "[[-0.045,-0.010],[-0.015,-0.010],[0.015,-0.010],[0.045,-0.010],[-0.045,0.010],[-0.015,0.010],[0.015,0.010],[0.045,0.010]]",
         "force_curve": '{"0.0":1070,"0.5":850,"1.0":620,"2.0":340,"3.0":180,"5.0":60}',
         "cog": "[0.0, 0.0, -0.045]",
         "mesh_path": "assets/schmalz/SGM-HP_40x121.obj",
@@ -73,7 +73,7 @@ def make_gripper_section():
             ], className="mb-2"),
             html.Div([
                 html.Label("Pole Positions (JSON)", className="form-label"),
-                dcc.Textarea(id="gripper-poles", value='[[-0.045,-0.025],[-0.015,-0.025],[0.015,-0.025],[0.045,-0.025],[-0.045,0.025],[-0.015,0.025],[0.015,0.025],[0.045,0.025]]', rows=3, className="form-control form-control-sm font-monospace"),
+                dcc.Textarea(id="gripper-poles", value='[[-0.045,-0.010],[-0.015,-0.010],[0.015,-0.010],[0.045,-0.010],[-0.045,0.010],[-0.015,0.010],[0.015,0.010],[0.045,0.010]]', rows=3, className="form-control form-control-sm font-monospace"),
             ], className="mb-2"),
             html.Div([
                 html.Label("Force Curve (JSON: gap_mm -> force_N)", className="form-label"),

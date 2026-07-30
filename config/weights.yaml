@@ -78,7 +78,7 @@ pole_coverage:
 
   weight: 0.05
 
-  minimum_pole_coverage_ratio: 0.60
+  minimum_pole_coverage_ratio: 0.40
 
 
 # ==========================================================

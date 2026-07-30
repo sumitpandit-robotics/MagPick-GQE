@@ -105,18 +105,16 @@ class PoleCoverageEvaluator(BaseEvaluator):
             # billet's projected contact zone.  The contact zone is
             # limited by the billet's cylindrical curvature — a pole
             # near the edge of the pad may fall off the billet surface.
-            # The billet contact width at position x along the length
-            # is: w(x) = 2 * sqrt(r² - x²) for |x| <= r.
-            # But the billet is along the pad's long axis, so we need
-            # to check the pole's position along the pad's short axis
-            # against the billet's circular cross-section.
-            if abs(pole_x) <= r:
-                max_contact_half_width = np.sqrt(r**2 - pole_x**2)
+            # The billet is along the pad's long axis (pole_x), so we
+            # check the pole's position along the pad's short axis
+            # (pole_y) against the billet's circular cross-section.
+            if abs(pole_y) <= r:
+                max_contact_half_length = np.sqrt(r**2 - pole_y**2)
             else:
-                max_contact_half_width = 0.0
+                max_contact_half_length = 0.0
 
-            # The pole_y position must be within the contact zone
-            if abs(pole_y) <= max_contact_half_width:
+            # The pole_x position must be within the contact zone along the length
+            if abs(pole_x) <= max_contact_half_length:
                 poles_in_contact += 1
 
         total = pole_layout.num_poles
