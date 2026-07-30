@@ -9,7 +9,7 @@ setup(
     author="Sumit Pandit",
     author_email="sumit.pandit@robotics.dev",
     url="https://github.com/sumitpandit-robotics/MagPick-GQE",
-    python_requires=">=3.11",
+    python_requires=">=3.10",
     packages=find_packages(),
     install_requires=[
         "numpy>=1.21",
