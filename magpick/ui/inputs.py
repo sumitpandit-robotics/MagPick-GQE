@@ -138,6 +138,7 @@ def make_scene_section():
 def make_poses_section():
     return dbc.Accordion(
         [dbc.AccordionItem([
+            dbc.Checklist(id="poses-use-example", options=[{"label": "Use example poses (datasets/poses.json)", "value": "example"}], value=[], className="mb-2"),
             html.Div([
                 dcc.Upload(id="poses-json-upload", children=dbc.Button("Upload .json poses", color="secondary", size="sm", className="w-100"), accept=".json"),
                 html.Div(id="poses-file-name", className="text-muted small mt-1"),
@@ -145,7 +146,7 @@ def make_poses_section():
             html.Div([
                 html.Label("Or enter poses manually (JSON)", className="form-label"),
                 dcc.Textarea(id="poses-manual", rows=6, className="form-control form-control-sm font-monospace",
-                    placeholder='{"billets": [{"id":0, "position":[x,y,z], "orientation":[x,y,z,w]}, ...]}'),
+                    placeholder='{"grasps": [{"position":[x,y,z], "orientation":[x,y,z,w]}, ...]}'),
             ]),
         ], title="Poses", item_id="poses-panel")],
         always_open=True, active_item=["poses-panel"],

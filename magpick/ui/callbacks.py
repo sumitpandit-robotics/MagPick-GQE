@@ -135,6 +135,7 @@ def register_callbacks(app):
         State("billet-air-gap", "value"),
         State("scene-use-example", "value"),
         State("resolution-slider", "value"),
+        State("poses-use-example", "value"),
         State("poses-manual", "value"),
         State("scene-ply-upload", "contents"),
         State("scene-ply-upload", "filename"),
@@ -143,7 +144,7 @@ def register_callbacks(app):
     )
     def run_evaluation(n_clicks, preset, g_name, g_force, g_padw, g_padl, g_weight, g_tcp,
                        g_poles_n, g_poles, g_fc, g_cog, b_dia, b_len, b_wt, b_mat, b_surf, b_gap,
-                       scene_opt, resolution, poses_manual, scene_contents, scene_filename,
+                       scene_opt, resolution, poses_opt, poses_manual, scene_contents, scene_filename,
                        poses_contents):
         if not n_clicks:
             raise PreventUpdate
@@ -175,15 +176,18 @@ def register_callbacks(app):
 
             # ---- Load poses ----
             billet_poses = []
-            if poses_contents is not None:
-                _, ext = os.path.splitext("poses.json")
+            if "example" in (poses_opt or []):
+                with open("datasets/poses.json", "r") as f:
+                    data = json.load(f)
+                billet_poses = data.get("billets", data.get("grasps", []))
+            elif poses_contents is not None:
                 content_type, content_string = poses_contents.split(",")
                 decoded = base64.b64decode(content_string)
                 data = json.loads(decoded.decode("utf-8"))
-                billet_poses = data.get("billets", [])
+                billet_poses = data.get("billets", data.get("grasps", []))
             elif poses_manual and poses_manual.strip():
                 data = json.loads(poses_manual)
-                billet_poses = data.get("billets", [])
+                billet_poses = data.get("billets", data.get("grasps", []))
 
             if not billet_poses:
                 empty_fig = render_scene(pcd, [], [], [])
