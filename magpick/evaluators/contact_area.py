@@ -11,9 +11,13 @@ import numpy as np
 
 from magpick.models import EvaluationResult
 from magpick.evaluators.base import BaseEvaluator
+from magpick.config import config
 
 
 class ContactAreaEvaluator(BaseEvaluator):
+
+    def __init__(self):
+        self.cfg = config["contact"]
 
     def evaluate(
         self,
@@ -36,38 +40,32 @@ class ContactAreaEvaluator(BaseEvaluator):
             name="Contact Area",
             passed=True,
             score=score,
-            weight=1.0,
+            weight=self.cfg["weight"],
             reason="Contact area evaluated.",
             details=metrics,
         )
 
-    def compute_metrics(
-        self,
-        candidate,
-        billet,
-        gripper,
-    ):
+    def compute_metrics(self, candidate, billet, gripper):
 
         billet_diameter = billet.radius * 2.0
 
-        gripper_width = gripper.pad_diameter
+        width_coverage = min(billet_diameter / gripper.pad_width, 1.0)
+        length_coverage = min(billet.length / gripper.pad_length, 1.0)
 
-        coverage_ratio = min(
-            billet_diameter / gripper_width,
-            1.0,
-        )
-
-        contact_factor = coverage_ratio
+        # Limiting axis determines actual coverage — a billet shorter than the
+        # pad's length can't achieve full contact even if its diameter matches
+        # the pad width, and vice versa.
+        coverage_ratio = min(width_coverage, length_coverage)
 
         return {
-
             "billet_diameter": billet_diameter,
-
-            "gripper_width": gripper_width,
-
+            "billet_length": billet.length,
+            "pad_width": gripper.pad_width,
+            "pad_length": gripper.pad_length,
+            "width_coverage": width_coverage,
+            "length_coverage": length_coverage,
             "coverage_ratio": coverage_ratio,
-
-            "contact_factor": contact_factor,
+            "contact_factor": coverage_ratio,
         }
 
     def compute_score(

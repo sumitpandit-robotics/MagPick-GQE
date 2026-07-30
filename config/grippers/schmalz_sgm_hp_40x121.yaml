@@ -1,0 +1,48 @@
+# Schmalz SGM-HP 40x121 magnetic gripper profile.
+# Dimensions from Schmalz assembly instructions (30.30.01.02582 · 04 · 09/25).
+# All physical quantities in SI units (meters, Newtons, kilograms).
+
+name: "Schmalz SGM-HP 40x121"
+type: "magnetic"
+
+footprint:
+  shape: "rectangle"
+  width_m: 0.040
+  length_m: 0.121
+
+tcp:
+  depth_m: 0.1034
+
+force:
+  rated_force_n: 1070.0
+  force_curve:
+    0.0: 1070.0
+    0.5: 850.0
+    1.0: 620.0
+    2.0: 340.0
+    3.0: 180.0
+    5.0: 60.0
+
+weight_kg: 1.5
+
+mesh: "assets/schmalz/SGM-HP_40x121.obj"
+
+cog_m: [0.0, 0.0, -0.045]
+
+inertia_kgm2:
+  ixx: 0.0012
+  iyy: 0.0048
+  izz: 0.0055
+
+pole_layout:
+  num_poles: 8
+  pole_positions_m:
+    - [-0.045, -0.025]
+    - [-0.015, -0.025]
+    - [0.015, -0.025]
+    - [0.045, -0.025]
+    - [-0.045, 0.025]
+    - [-0.015, 0.025]
+    - [0.015, 0.025]
+    - [0.045, 0.025]
+  pole_diameter_m: 0.018

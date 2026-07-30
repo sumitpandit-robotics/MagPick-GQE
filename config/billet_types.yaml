@@ -1,0 +1,38 @@
+# ==========================================================
+# Billet Type Library
+# ==========================================================
+# Match measured billet dimensions against known types.
+# All dimensions in millimetres.  Tolerance is per-axis.
+# The first match wins — put most common types first.
+
+- sku: "billet_40x200_steel"
+  nominal_diameter_mm: 40
+  nominal_length_mm: 200
+  tolerance_mm: 2
+  material: forged_steel
+  surface: clean
+  description: "40mm dia × 200mm forged steel round bar"
+
+- sku: "billet_50x250_steel"
+  nominal_diameter_mm: 50
+  nominal_length_mm: 250
+  tolerance_mm: 2
+  material: forged_steel
+  surface: clean
+  description: "50mm dia × 250mm forged steel round bar"
+
+- sku: "billet_60x300_cast_iron"
+  nominal_diameter_mm: 60
+  nominal_length_mm: 300
+  tolerance_mm: 3
+  material: cast_iron
+  surface: scale
+  description: "60mm dia × 300mm cast iron round bar"
+
+- sku: "billet_30x150_stainless"
+  nominal_diameter_mm: 30
+  nominal_length_mm: 150
+  tolerance_mm: 2
+  material: stainless
+  surface: clean
+  description: "30mm dia × 150mm stainless steel round bar"

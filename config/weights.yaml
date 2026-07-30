@@ -3,15 +3,17 @@
 # ==========================================================
 
 geometry:
-
   weight: 0.25
 
+  # Minimum overall geometry score required to pass
   minimum_score: 0.70
 
+  # Surface normal thresholds
   max_normal_error_deg: 15.0
+  warning_normal_error_deg: 25.0
 
+  # Contact quality thresholds
   minimum_contact_ratio: 0.80
-
   maximum_overhang_ratio: 0.20
 
 
@@ -21,7 +23,7 @@ geometry:
 
 contact:
 
-  weight: 0.20
+  weight: 0.15
 
   minimum_area_ratio: 0.85
 
@@ -32,11 +34,64 @@ contact:
 
 magnetic:
 
-  weight: 0.25
+  weight: 0.30
 
   minimum_safety_factor: 2.0
 
   maximum_cg_offset_mm: 40.0
+
+  # Material derating factors (magnetic permeability relative to forged_steel).
+  # aluminium is 0.0 because it is non-ferromagnetic.
+  # An unrecognized material must NOT default to 1.0 (best case) — see
+  # MagneticEvaluator for the enforced fail-safe.
+  material_factor:
+    forged_steel: 1.00
+    cast_iron: 0.90
+    stainless: 0.35
+    aluminium: 0.00
+
+  # Surface condition derating factors.
+  surface_factor:
+    clean: 1.00
+    oily: 0.80
+    rusty: 0.75
+    scale: 0.70
+
+  # Safety-factor → score mapping.
+  # A candidate is "passed" if safety_factor >= minimum_safety_factor.
+  score_thresholds:
+    - min_safety_factor: 3.0
+      score: 1.0
+    - min_safety_factor: 2.0
+      score: 0.8
+    - min_safety_factor: 1.5
+      score: 0.6
+    - min_safety_factor: 1.2
+      score: 0.4
+
+
+# ==========================================================
+# Pole Coverage
+# ==========================================================
+
+pole_coverage:
+
+  weight: 0.05
+
+  minimum_pole_coverage_ratio: 0.60
+
+
+# ==========================================================
+# Robot Dynamics
+# ==========================================================
+
+robot_dynamics:
+
+  weight: 0.10
+
+  minimum_payload_margin: 1.2
+
+  minimum_dynamic_safety_factor: 1.5
 
 
 # ==========================================================
@@ -45,7 +100,7 @@ magnetic:
 
 environment:
 
-  weight: 0.15
+  weight: 0.05
 
   minimum_clearance_mm: 15.0
 
@@ -67,4 +122,13 @@ perception:
 
 ai:
 
-  weight: 0.10
+  weight: 0.05
+
+# ==========================================================
+# Collision
+# ==========================================================
+collision:
+
+  weight: 0.15
+
+  minimum_clearance_score: 0.50

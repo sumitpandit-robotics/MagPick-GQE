@@ -13,9 +13,13 @@ import numpy as np
 
 from magpick.models import EvaluationResult
 from magpick.evaluators.base import BaseEvaluator
+from magpick.config import config
 
 
 class CollisionEvaluator(BaseEvaluator):
+
+    def __init__(self):
+        self.cfg = config["collision"]
 
     def evaluate(
         self,
@@ -33,13 +37,13 @@ class CollisionEvaluator(BaseEvaluator):
 
         score = self.compute_score(metrics)
 
-        passed = score > 0.5
+        passed = score >= self.cfg["minimum_clearance_score"]
 
         return EvaluationResult(
             name="Collision",
             passed=passed,
             score=score,
-            weight=1.0,
+            weight=self.cfg["weight"],
             reason="Collision evaluated.",
             details=metrics,
         )

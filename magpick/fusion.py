@@ -8,22 +8,13 @@ Fusion Engine
 Combines all evaluator scores and ranks grasp candidates.
 """
 
-from dataclasses import dataclass
-
+from magpick.models import CandidateResult
 from magpick.evaluators.geometry import GeometryEvaluator
 from magpick.evaluators.magnetic import MagneticEvaluator
 from magpick.evaluators.contact_area import ContactAreaEvaluator
 from magpick.evaluators.collision import CollisionEvaluator
-
-
-@dataclass
-class CandidateResult:
-
-    candidate: object
-
-    final_score: float
-
-    evaluator_results: list
+from magpick.evaluators.pole_coverage import PoleCoverageEvaluator
+from magpick.evaluators.robot_dynamics import RobotDynamicsEvaluator
 
 
 class FusionEngine:
@@ -38,7 +29,11 @@ class FusionEngine:
 
             MagneticEvaluator(),
 
+            PoleCoverageEvaluator(),
+
             CollisionEvaluator(),
+
+            RobotDynamicsEvaluator(),
         ]
 
     def evaluate_candidate(
@@ -63,6 +58,8 @@ class FusionEngine:
 
         total_weight = 0.0
 
+        all_passed = True
+
         for evaluator in self.evaluators:
 
             result = evaluator.evaluate(
@@ -81,6 +78,10 @@ class FusionEngine:
 
             evaluator_results.append(result)
 
+            if not result.passed:
+
+                all_passed = False
+
             weighted_sum += result.score * result.weight
 
             total_weight += result.weight
@@ -92,6 +93,15 @@ class FusionEngine:
         else:
 
             final_score = weighted_sum / total_weight
+
+        # Hard-constraint enforcement: if any evaluator failed its
+        # minimum threshold, the candidate is disqualified regardless
+        # of its weighted average score.  This prevents a candidate
+        # that violates a safety rule (e.g., insufficient holding
+        # force) from being selected because other scores are high.
+        if not all_passed:
+
+            final_score = 0.0
 
         return CandidateResult(
 
@@ -146,6 +156,14 @@ class FusionEngine:
             reverse=True,
 
         )
+
+        for i, result in enumerate(results):
+
+            result.rank = i + 1
+
+            result.status = (
+                "PASS" if result.final_score > 0.0 else "FAIL"
+            )
 
         return results
 

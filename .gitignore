@@ -19,6 +19,12 @@ build/
 dist/
 *.egg-info/
 
+# Generated output
+output/
+
+# Build artifacts
+magpick_gqe_source.zip
+
 # Open3D caches
 *.log
 
