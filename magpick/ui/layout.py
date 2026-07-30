@@ -9,7 +9,7 @@ from dash import dcc, html
 
 from magpick.ui.inputs import make_input_panel
 from magpick.ui.viewport_3d import make_3d_viewport
-from magpick.ui.results import make_summary_cards, make_comparison_chart, make_candidate_list, make_candidate_detail
+from magpick.ui.results import make_summary_cards, make_comparison_chart, make_candidate_list, make_candidate_detail, make_download_bar
 
 
 CUSTOM_CSS = {
@@ -68,6 +68,9 @@ def make_layout():
 
                 # Summary Dashboard
                 make_summary_cards(),
+
+                # Download bar
+                make_download_bar(),
 
                 # Comparison Chart + Candidate List
                 dbc.Row([

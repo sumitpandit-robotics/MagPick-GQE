@@ -23,6 +23,21 @@ def make_summary_cards():
     ], className="mb-3")
 
 
+def make_download_bar():
+    return html.Div([
+        dcc.Download(id="download-html"),
+        dcc.Download(id="download-json"),
+        dbc.Row([
+            dbc.Col([
+                dbc.ButtonGroup([
+                    dbc.Button([html.I(className="bi bi-file-earmark-code me-1"), "Download HTML"], id="btn-download-html", color="secondary", size="sm", disabled=True),
+                    dbc.Button([html.I(className="bi bi-filetype-json me-1"), "Download JSON"], id="btn-download-json", color="secondary", size="sm", disabled=True),
+                ], size="sm"),
+            ], width="auto"),
+        ], className="mb-2"),
+    ])
+
+
 def make_comparison_chart():
     return dcc.Graph(id="comparison-chart", style={"height": "280px"}, config={"displayModeBar": False})
 
