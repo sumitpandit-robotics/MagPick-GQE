@@ -1,0 +1,15 @@
+rated_force: 560.0
+
+material_factor:
+  forged_steel: 1.00
+  cast_iron: 0.90
+  stainless: 0.35
+  aluminium: 0.00
+
+surface_factor:
+  clean: 1.00
+  oily: 0.80
+  rusty: 0.75
+  scale: 0.70
+
+minimum_safety_factor: 2.0

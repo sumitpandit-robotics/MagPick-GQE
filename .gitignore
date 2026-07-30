@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+.venv/
+venv/
+
+# VS Code
+.vscode/
+
+# JetBrains
+.idea/
+
+# Build
+build/
+dist/
+*.egg-info/
+
+# Open3D caches
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
