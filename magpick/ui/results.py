@@ -113,7 +113,7 @@ def render_candidate_detail(candidate, evaluator_results, score, snapshots=None)
     rec_items = []
     for rec in recs:
         risk_cls = {"High": "danger", "Medium": "warning", "Low": "success"}.get(rec["risk"], "secondary")
-        rec_items.append(html.Div([html.Span(rec["icon"], className="me-1"), html.Strong(rec["evaluator"]), " \u2014 ", rec["reason"], html.Br(), html.Small("Risk: ", html.Span(rec["risk"], className=f"text-{risk_cls} fw-bold"), " | Suggestion: ", rec["suggestion"], className="text-muted")], className="mb-2 pb-2 border-bottom"))
+        rec_items.append(html.Div([html.Span(rec["icon"], className="me-1"), html.Strong(rec["evaluator"]), " \u2014 ", rec["reason"], html.Br(), html.Small(["Risk: ", html.Span(rec["risk"], className=f"text-{risk_cls} fw-bold"), " | Suggestion: ", rec["suggestion"]], className="text-muted")], className="mb-2 pb-2 border-bottom"))
 
     # Snapshots
     snap_div = html.Div()
