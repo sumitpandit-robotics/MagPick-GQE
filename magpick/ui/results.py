@@ -106,7 +106,7 @@ def render_candidate_detail(candidate, evaluator_results, score, snapshots=None)
     if mag_ev:
         d = mag_ev.details
         force_svg = render_force_vector_svg(holding_force=d.get("holding_force", 0), required_force=d.get("required_force", 0), safety_factor=d.get("safety_factor", 0))
-        force_div = html.Div([html.H6("Force Analysis"), html.Div(dangerouslySetInnerHTML={"__html": force_svg})])
+        force_div = html.Div([html.H6("Force Analysis"), dcc.Markdown(force_svg, dangerously_allow_html=True)])
 
     # Recommendations
     recs = generate_recommendations(evaluator_results)
