@@ -15,8 +15,10 @@
 
 - **6 Physics-Based Evaluators** — Geometry, Contact Area, Magnetic Force, Pole Coverage, Collision Avoidance, Robot Dynamics
 - **Hard-Constraint Safety Policy** — Any single evaluator failure immediately disqualifies the candidate (score = 0). Safety-critical for physical manipulation.
+- **Interactive Dash UI** — Full web-based HMI with 3D viewport, candidate selection, radar charts, force analysis, and real-time evaluation
 - **Multi-View 3D Snapshots** — Open3D renders isometric, top, front, and side views of each grasp candidate with gripper + billet + pole visualization
 - **Production HTML Report** — Executive dashboard, Chart.js radar charts, force vector SVG diagrams, progress bars, engineering recommendations
+- **Report Download** — Export evaluation results as self-contained HTML or structured JSON from the dashboard
 - **Config-Driven Architecture** — Single `weights.yaml` source of truth for all evaluator weights, thresholds, material factors, and surface factors
 - **Gripper Profile System** — YAML-based profiles with force curves, center of gravity, inertia tensors, and pole layouts
 - **Pre-Flight Compatibility Checks** — Validates material ferromagnetism, weight limits, and geometry before running full evaluation
@@ -77,6 +79,10 @@ PYTHONPATH="" python run_test.py
 
 # Open the HTML report
 xdg-open output/evaluation_report.html
+
+# Launch the interactive Dash UI
+python run_ui.py
+# → http://localhost:8050
 ```
 
 ---
