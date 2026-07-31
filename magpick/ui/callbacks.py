@@ -194,9 +194,9 @@ def register_callbacks(app):
                 err = html.Div([html.H5("No poses loaded", className="text-danger"), html.P("Upload a .json file or enter poses manually")])
                 return empty_fig, "--", "--", "0", "0", "0", "--", err, err, go.Figure(), {}, "No poses"
 
-            # ---- Create billets & candidates ----
+            # ---- Create billets & candidates (per-billet) ----
             billets = []
-            candidates = []
+            all_candidates = []      # list of (billet_idx, CandidatePose)
             for bp in billet_poses:
                 pos = np.array(bp["position"])
                 orient = np.array(bp["orientation"])
@@ -211,10 +211,21 @@ def register_callbacks(app):
                     air_gap_mm=b_gap or 0,
                 )
                 billets.append(b)
+
                 # Generate grasp candidates aligned with billet axis
                 from scipy.spatial.transform import Rotation
                 R_billet = Rotation.from_quat(orient)
                 billet_long_axis = R_billet.as_matrix()[:, 2]  # local Z = cylinder axis
+
+                # MG-25: degeneracy guard — if axis is parallel to seed [1,0,0],
+                # pick a perpendicular seed instead
+                seed = np.array([1.0, 0.0, 0.0])
+                if abs(np.dot(billet_long_axis, seed)) > 0.99:
+                    seed = np.array([0.0, 1.0, 0.0])
+                basis_u = np.cross(billet_long_axis, seed)
+                basis_u /= np.linalg.norm(basis_u)
+                basis_v = np.cross(billet_long_axis, basis_u)
+                basis_v /= np.linalg.norm(basis_v)
 
                 tcp_depth = (g_tcp or 103.4) / 1000.0
 
@@ -223,9 +234,8 @@ def register_callbacks(app):
                     azimuth_deg = i * 30.0
                     azimuth_rad = np.radians(azimuth_deg)
 
-                    # Approach direction: rotate around billet axis
-                    R_azimuth = Rotation.from_rotvec(azimuth_rad * billet_long_axis)
-                    approach = R_azimuth.apply(np.array([1.0, 0.0, 0.0]))
+                    # Approach direction in the plane perpendicular to billet axis
+                    approach = basis_u * np.cos(azimuth_rad) + basis_v * np.sin(azimuth_rad)
 
                     # TCP position: billet center + approach * (billet radius + TCP depth)
                     tcp_pos = pos + approach * (b.radius + tcp_depth)
@@ -240,34 +250,54 @@ def register_callbacks(app):
 
                     R_gripper = Rotation.from_matrix(np.column_stack([local_x, local_y, local_z]))
                     cp = CandidatePose(position=tcp_pos, orientation=R_gripper.as_quat())
-                    candidates.append(cp)
+                    all_candidates.append((len(billets) - 1, cp))
 
-            # ---- Run evaluation ----
+            # ---- Run evaluation: per-billet (MG-24) ----
             gqe = GraspQualityEngine("config/grippers/schmalz_sgm_hp_40x121.yaml")
-            report = gqe.evaluate(candidates, billets[0], scene)
+            candidates = [cp for _, cp in all_candidates]
+            billet_indices = [bi for bi, _ in all_candidates]
 
-            scores = [r.final_score for r in report.candidates]
-            status = "PASS" if report.compatibility.compatible else "FAIL"
+            # Evaluate each billet's candidates against THAT billet
+            from magpick.models import CandidateResult
+            all_results = []
+            for billet_idx in range(len(billets)):
+                b = billets[billet_idx]
+                b_candidates = [cp for bi, cp in all_candidates if bi == billet_idx]
+                if not b_candidates:
+                    continue
+                sub_report = gqe.evaluate(b_candidates, b, scene)
+                all_results.extend(sub_report.candidates)
+
+            # Rebuild a combined report-like structure
+            scores = [r.final_score for r in all_results]
+            passed_n = sum(1 for r in all_results if r.final_score > 0)
+            status = "PASS" if passed_n > 0 else "FAIL"
+
+            # Sort by score descending
+            ranked_indices = sorted(range(len(all_results)), key=lambda i: all_results[i].final_score, reverse=True)
+            ranked_results = [all_results[i] for i in ranked_indices]
+            ranked_candidates = [candidates[i] for i in ranked_indices]
+            ranked_scores = [all_results[i].final_score for i in ranked_indices]
+            scores = ranked_scores
 
             # ---- 3D viewport ----
             billet_dicts = [{"position": b.position.tolist(), "radius": b.radius, "length": b.length, "id": b.id} for b in billets]
-            fig = render_scene(pcd, billet_dicts, candidates, scores)
+            fig = render_scene(pcd, billet_dicts, ranked_candidates, scores)
 
             # ---- Summary cards ----
-            best = f"{report.summary['best_score']:.3f}" if report.summary["best_score"] > 0 else "N/A"
-            passed_n = report.summary["passed"]
-            failed_n = report.summary["failed"]
-            total_n = report.summary["total_candidates"]
+            failed_n = sum(1 for r in ranked_results if r.final_score == 0)
+            total_n = len(ranked_results)
+            best = f"{ranked_results[0].final_score:.3f}" if ranked_results and ranked_results[0].final_score > 0 else "N/A"
             rate = f"{(passed_n / total_n * 100):.0f}%" if total_n > 0 else "0%"
 
             # ---- Candidate list ----
-            cand_list = render_candidate_list(candidates, scores)
+            cand_list = render_candidate_list(ranked_candidates, scores)
 
             # ---- First candidate detail ----
             first_detail = render_candidate_detail(
-                report.candidates[0].candidate if report.candidates else None,
-                report.candidates[0].evaluator_results if report.candidates else [],
-                report.candidates[0].final_score if report.candidates else 0,
+                ranked_results[0].candidate if ranked_results else None,
+                ranked_results[0].evaluator_results if ranked_results else [],
+                ranked_results[0].final_score if ranked_results else 0,
             )
 
             # ---- Comparison chart ----
@@ -282,14 +312,14 @@ def register_callbacks(app):
 
             # ---- Store evaluation data ----
             eval_data = {
-                "candidates_positions": [c.position.tolist() for c in candidates],
-                "candidates_orientations": [c.orientation.tolist() for c in candidates],
+                "candidates_positions": [c.position.tolist() for c in ranked_candidates],
+                "candidates_orientations": [c.orientation.tolist() for c in ranked_candidates],
                 "scores": scores,
-                "evaluator_names": [ev.name for ev in report.candidates[0].evaluator_results] if report.candidates else [],
-                "evaluator_scores": [[ev.score for ev in r.evaluator_results] for r in report.candidates],
-                "evaluator_passed": [[ev.passed for ev in r.evaluator_results] for r in report.candidates],
-                "evaluator_details": [{ev.name: ev.details for ev in r.evaluator_results} for r in report.candidates],
-                "evaluator_reasons": [{ev.name: ev.reason for ev in r.evaluator_results} for r in report.candidates],
+                "evaluator_names": [ev.name for ev in ranked_results[0].evaluator_results] if ranked_results else [],
+                "evaluator_scores": [[ev.score for ev in r.evaluator_results] for r in ranked_results],
+                "evaluator_passed": [[ev.passed for ev in r.evaluator_results] for r in ranked_results],
+                "evaluator_details": [{ev.name: ev.details for ev in r.evaluator_results} for r in ranked_results],
+                "evaluator_reasons": [{ev.name: ev.reason for ev in r.evaluator_results} for r in ranked_results],
                 "final_scores": scores,
                 "billets": billet_dicts,
             }
